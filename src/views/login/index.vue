@@ -1,29 +1,50 @@
 <template>
   <div class="login-container">
-    <el-form class="login-form">
+    <el-form
+      ref="loginFromRef"
+      class="login-form"
+      :model="loginForm"
+      :rules="loginRules"
+    >
       <div class="title-container">
         <h3 class="title">用户登录</h3>
       </div>
       <!-- username -->
-      <el-form-item>
+      <el-form-item prop="username">
         <span class="svg-container">
           <svg-icon icon="user"></svg-icon>
         </span>
-        <el-input placeholder="username" name="username" type="text"></el-input>
+        <el-input
+          v-model="loginForm.username"
+          placeholder="username"
+          name="username"
+          type="text"
+        ></el-input>
       </el-form-item>
       <!-- password -->
-      <el-form-item>
+      <el-form-item prop="password">
         <span class="svg-container">
           <svg-icon icon="password"></svg-icon>
         </span>
-        <el-input placeholder="password" name="password"></el-input>
-        <span class="show-pwd">
-          <svg-icon icon="eye"></svg-icon>
+        <el-input
+          v-model="loginForm.password"
+          placeholder="password"
+          name="password"
+          :type="passwordType"
+        ></el-input>
+        <span class="show-pwd" @click="onChangePwdType">
+          <svg-icon
+            :icon="passwordType === 'password' ? 'eye' : 'eye-open'"
+          ></svg-icon>
         </span>
       </el-form-item>
 
       <!-- 登录按钮 -->
-      <el-button type="primary" style="width: 100%; margin-bottom: 30px"
+      <el-button
+        type="primary"
+        style="width: 100%; margin-bottom: 30px"
+        :loading="loading"
+        @click="handleLogin"
         >登录</el-button
       >
     </el-form>
@@ -32,7 +53,71 @@
 
 <script setup>
 // 导入组件之后无需注册可直接使用
-import {} from 'vue'
+import { ref } from 'vue'
+import { validatePassword } from './rules'
+import { useStore } from 'vuex'
+import { useRouter } from 'vue-router'
+
+// 数据源
+const loginForm = ref({
+  username: 'super-admin',
+  password: '123456'
+})
+// 验证规则
+const loginRules = ref({
+  username: [
+    {
+      required: true,
+      trigger: 'blur',
+      message: '用户名为必填项'
+    }
+  ],
+  password: [
+    {
+      required: true,
+      trigger: 'blur',
+      validator: validatePassword()
+    }
+  ]
+})
+
+// 处理密码框文本显示状态
+const passwordType = ref('password')
+// template 中绑定的方法，直接声明即可
+const onChangePwdType = () => {
+  // 使用 ref 声明的数据，在 script 中使用时，需要加 .value 来获取具体的值，但是在 template 中使用的时候，不需要加 value
+  if (passwordType.value === 'password') {
+    passwordType.value = 'text'
+  } else {
+    passwordType.value = 'password'
+  }
+}
+
+// 登录动作处理
+const loading = ref(false)
+const loginFromRef = ref(null)
+const store = useStore()
+const router = useRouter()
+const handleLogin = () => {
+  // 1. 进行表单校验
+  loginFromRef.value.validate(valid => {
+    if (!valid) return
+    // 2. 触发登录动作
+    loading.value = true
+    store
+      .dispatch('user/login', loginForm.value)
+      .then(() => {
+        loading.value = false
+        // TODO: 3. 进行登录后处理
+        router.push('/')
+      })
+      .catch(err => {
+        console.log(err)
+        loading.value = false
+        router.push('/')
+      })
+  })
+}
 </script>
 
 <style lang="scss" scoped>
